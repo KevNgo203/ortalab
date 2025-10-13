@@ -1,0 +1,43 @@
+# ---- Rust / Cargo ----
+# Ignore compiled artifacts
+/target/
+
+# Ignore Cargo's backup files
+**/*.rs.bk
+
+# Ignore build output from docs
+/target/doc/
+
+# Ignore incremental compilation files
+/.cargo/
+/.cargo-ok
+
+# ---- IDE / Editor ----
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (CLion, IntelliJ, RustRover)
+.idea/
+
+# ---- OS-specific ----
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Logs / Temp ----
+*.log
+*.tmp
+*.swp
+*.swo
+
+# ---- Optional: test artifacts ----
+# If you generate coverage or profiling data
+coverage/
+.profraw
+
+mark_request.txt
