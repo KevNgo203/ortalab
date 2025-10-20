@@ -39,6 +39,3 @@ Desktop.ini
 # If you generate coverage or profiling data
 coverage/
 .profraw
-
-mark_request.txt
-*.yml
