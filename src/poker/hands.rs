@@ -1,7 +1,7 @@
-use std::collections::HashSet;
+use std::ptr;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use ortalib::{Card, PokerHand};
+use ortalib::{Card, PokerHand, Rank};
 
 // Poker Hand: High Card
 // When no other poker hand is possible, the one highest card in your played hand. 
@@ -24,7 +24,7 @@ pub fn is_pair(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
 
      for (curr, next) in cards.iter().tuple_windows() {
-        if curr.rank.rank_value() == next.rank.rank_value() {
+        if compute_card_order(*curr)  == compute_card_order(*next) {
             card_to_return.push(*curr);
             card_to_return.push(*next);
             break;
@@ -41,7 +41,7 @@ pub fn is_two_pair(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
 
      for (curr, next) in cards.iter().tuple_windows() {
-        if curr.rank.rank_value() == next.rank.rank_value() {
+        if compute_card_order(*curr)  == compute_card_order(*next) {
             card_to_return.push(*curr);
             card_to_return.push(*next);
         }
@@ -55,16 +55,24 @@ pub fn is_two_pair(cards: &Vec<Card>) -> Vec<Card> {
 // Three cards with a matching rank. Suits may differ.
 // Base scoring: 30 chips x 3 mult
 pub fn is_three_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
-    let mut card_to_return = HashSet::new();
-
+    let mut card_to_return: Vec<Card> = Vec::new();
      for (curr, next) in cards.iter().tuple_windows() {
-        if curr.rank.rank_value() == next.rank.rank_value() {
-            card_to_return.insert(*curr);
-            card_to_return.insert(*next);
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+        if curr_order == next_order {
+            card_to_return.push(*curr);
+            if let Some(last) = cards.last() {
+                if ptr::eq(next, last) {
+                    card_to_return.push(*next);
+                }
+            }
+        } else {
+            if card_to_return.len() == 2 {
+                card_to_return.push(*curr);
+            }
         }
     }
-
-    card_to_return.iter().map(|&card| card).collect::<Vec<Card>>()
+    card_to_return
 }
 
 // Poker Hand: Straight
@@ -73,51 +81,215 @@ pub fn is_three_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
 pub fn is_straight(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
 
-
-
-     for (curr, next) in cards.iter().tuple_windows() {
-
-      // Check for consecutive cards with values from 2 - 9
-      if next.rank.rank_value() - curr.rank.rank_value() == 1.0 {
+    // Check for consecutive cards with values from 2 - A
+    for (curr, next) in cards.iter().tuple_windows() {
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+        if next_order - curr_order == 1.0 {
           card_to_return.push(*curr);
-      } 
-      // Check for consecutive cards with values from 10 - K
-      else if next.rank.rank_value() - curr.rank.rank_value() == 0.0 {
-        if curr.rank.is_face() {
 
-        } else {
-          card_to_return.push(*curr);
+          if let Some(last) = cards.last() {
+            if ptr::eq(next, last) {
+                card_to_return.push(*next);
+            }
+          }
+        } 
+        // Handle case where Ace is the lowest value card (below 2)
+        else if next_order - curr_order == 9.0 {
+            card_to_return.push(*curr);
+            card_to_return.push(*next);
         }
-      }
+    }
+    card_to_return
+}
+
+// Poker Hand: Flush
+// Five cards of any rank, all from a single suit.
+// Base scoring: 35 chips x 4 mult
+pub fn is_flush(cards: &Vec<Card>) -> Vec<Card> {
+    let mut card_to_return: Vec<Card> = Vec::new();
+    let base_suit = cards.first().unwrap().suit;
+
+    cards.iter().for_each(|card| {
+        if card.suit == base_suit {
+            card_to_return.push(*card);
+        }
+    });
+    card_to_return
+}
+
+// Poker Hand: Full House
+// Three cards with a matching rank, and two cards with any other matching rank, 
+// with cards from two or more suits.
+// Base scoring: 40 chips x 4 mult
+pub fn is_full_house(cards: &Vec<Card>) -> Vec<Card> {
+    let card_to_return = cards.clone();
+
+    let vec_check1 = is_three_of_a_kind(cards);
+    let check1 = vec_check1.first().unwrap();
+
+    let vec_check2 = is_pair(cards);
+    let check2 = vec_check2.first().unwrap();
+
+    if vec_check1.len() == 3 && vec_check2.len() == 2 && compute_card_order(*check1) != compute_card_order(*check2) {
+        return card_to_return;
     }
 
+    vec![]
+}
+
+// Poker Hand: Four of a Kind
+// Four cards with a matching rank. Suits may differ.
+// Base scoring: 60 chips x 4 mult
+pub fn is_four_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
+    let mut card_to_return: Vec<Card> = Vec::new();
+     for (curr, next) in cards.iter().tuple_windows() {
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+        if curr_order == next_order {
+            card_to_return.push(*curr);
+            if let Some(last) = cards.last() {
+                if ptr::eq(next, last) {
+                    card_to_return.push(*next);
+                }
+            }
+        } else {
+            if card_to_return.len() == 3 {
+                card_to_return.push(*curr);
+            } else {
+                break; 
+            }
+        }
+    }
     card_to_return
+}
+
+// Poker Hand: Straight Flush
+// Five cards in consecutive order, all from the same suit. Aces can be counted high or low.
+// Base scoring: 100 chips x 8 mult
+pub fn is_straight_flush(cards: &Vec<Card>) -> Vec<Card> {
+    let card_to_return = cards.clone();
+    if is_flush(cards).len() == 5 && is_straight(cards).len() == 5 {
+        return card_to_return; 
+    } 
+
+    vec![]
+}
+
+// Poker Hand: Five of a Kind
+// Five cards with the same rank which are not all the same suit.
+// (an "illegal" hand)
+// Base scoring: 120 chips x 12 mult
+pub fn is_five_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
+    let mut card_to_return: Vec<Card> = Vec::new();
+     for (curr, next) in cards.iter().tuple_windows() {
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+        if curr_order == next_order {
+            card_to_return.push(*curr);
+            if let Some(last) = cards.last() {
+                if ptr::eq(next, last) {
+                    card_to_return.push(*next);
+                }
+            }
+        } 
+    }
+    card_to_return
+}
+
+
+pub fn compute_card_order(card: Card) -> f64 {
+    let return_value = match card.rank {
+        Rank::Two => 2.0,
+        Rank::Three => 3.0,
+        Rank::Four => 4.0,
+        Rank::Five => 5.0,
+        Rank::Six => 6.0,
+        Rank::Seven => 7.0,
+        Rank::Eight => 8.0,
+        Rank::Nine => 9.0,
+        Rank::Ten => 10.0,
+        Rank::Jack => 11.0,
+        Rank::Queen => 12.0,
+        Rank::King => 13.0,
+        Rank::Ace => 14.0,
+    };
+
+    return_value   
 }
 
 
 pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     let mut return_card;
+
+    // Check if a four of a kind  exists
+    return_card = is_five_of_a_kind(&cards);
+    // println!("{:?}", return_card);
+    if return_card.len() == 5 {
+        println!("IS FIVE OF A KIND");
+        return (PokerHand::FiveOfAKind, return_card);
+    }
+
+    // Check if a four of a kind  exists
+    return_card = is_straight_flush(&cards);
+    // println!("{:?}", return_card);
+    if return_card.len() == 5 {
+        println!("IS STRAIGHT FLUSH");
+        return (PokerHand::StraightFlush, return_card);
+    }
+
+    // Check if a four of a kind  exists
+    return_card = is_four_of_a_kind(&cards);
+    // println!("{:?}", return_card);
+    if return_card.len() == 4 {
+        println!("IS FOUR OF A KIND");
+        return (PokerHand::FourOfAKind, return_card);
+    }
+
+    // Check if a full house exists
+    return_card = is_full_house(&cards);
+    // println!("{:?}", return_card);
+    if return_card.len() == 5 {
+        println!("IS FULL HOUSE");
+        return (PokerHand::FullHouse, return_card);
+    }
+
+    // Check if a flush exists
+    return_card = is_flush(&cards);
+    if return_card.len() == 5 {
+        println!("IS FLUSH");
+        return (PokerHand::Flush, return_card);
+    }
     
-    
+    // Check if a straight exists
+    return_card = is_straight(&cards);
+    if return_card.len() == 5 {
+        println!("IS STRAIGHT");
+        return (PokerHand::Straight, return_card);
+    }
     
     // Check if a three of a kind exists
     return_card = is_three_of_a_kind(&cards);
     if return_card.len() == 3 {
+        println!("IS THREE OF A KIND");
         return (PokerHand::ThreeOfAKind, return_card);
     }
 
     // Check if a pair exists
     return_card = is_two_pair(&cards);
     if return_card.len() == 4 {
+        println!("IS TWO PAIR");
         return (PokerHand::TwoPair, return_card);
     }
     
     // Check if a pair exists
     return_card = is_pair(&cards);
     if return_card.len() == 2 {
+        println!("IS PAIR");
         return (PokerHand::Pair, return_card);
     }
 
     // Default/base case when no other poker hands exist
+    println!("IS HIGH CARD");
     (PokerHand::HighCard, is_high_card(&cards))
 }
