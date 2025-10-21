@@ -39,12 +39,25 @@ pub fn is_pair(cards: &Vec<Card>) -> Vec<Card> {
 // Base scoring: 20 chips x 2 mult
 pub fn is_two_pair(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
+    let mut prev_rank = 0.0;
 
      for (curr, next) in cards.iter().tuple_windows() {
-        if compute_card_order(*curr)  == compute_card_order(*next) {
-            card_to_return.push(*curr);
-            card_to_return.push(*next);
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+        if prev_rank != 0.0 {
+            if curr_order  == next_order
+            &&  curr_order != prev_rank { 
+                card_to_return.push(*curr);
+                card_to_return.push(*next);
+            }
+        } else {
+            if curr_order == next_order {
+                 card_to_return.push(*curr);
+                 card_to_return.push(*next);
+                 prev_rank = curr_order;
+            }  
         }
+
     }
 
     card_to_return
@@ -56,10 +69,13 @@ pub fn is_two_pair(cards: &Vec<Card>) -> Vec<Card> {
 // Base scoring: 30 chips x 3 mult
 pub fn is_three_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
+    let mut prev_rank = 0.0;
+
      for (curr, next) in cards.iter().tuple_windows() {
         let curr_order = compute_card_order(*curr);
         let next_order = compute_card_order(*next);
         if curr_order == next_order {
+            prev_rank = curr_order;
             card_to_return.push(*curr);
             if let Some(last) = cards.last() {
                 if ptr::eq(next, last) {
@@ -67,7 +83,7 @@ pub fn is_three_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
                 }
             }
         } else {
-            if card_to_return.len() == 2 {
+            if curr_order == prev_rank {
                 card_to_return.push(*curr);
             }
         }
@@ -123,30 +139,26 @@ pub fn is_flush(cards: &Vec<Card>) -> Vec<Card> {
 // with cards from two or more suits.
 // Base scoring: 40 chips x 4 mult
 pub fn is_full_house(cards: &Vec<Card>) -> Vec<Card> {
-    let card_to_return = cards.clone();
-
-    let vec_check1 = is_three_of_a_kind(cards);
-    let check1 = vec_check1.first().unwrap();
-
-    let vec_check2 = is_pair(cards);
-    let check2 = vec_check2.first().unwrap();
-
-    if vec_check1.len() == 3 && vec_check2.len() == 2 && compute_card_order(*check1) != compute_card_order(*check2) {
-        return card_to_return;
-    }
-
-    vec![]
-}
-
-// Poker Hand: Four of a Kind
-// Four cards with a matching rank. Suits may differ.
-// Base scoring: 60 chips x 4 mult
-pub fn is_four_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
+    let mut prev_rank = 0.0;
+
      for (curr, next) in cards.iter().tuple_windows() {
         let curr_order = compute_card_order(*curr);
         let next_order = compute_card_order(*next);
+
+        if prev_rank != 0.0 {
+            if curr_order == next_order && curr_order != prev_rank {
+                card_to_return.push(*curr);
+                if let Some(last) = cards.last() {
+                    if ptr::eq(next, last) {
+                        card_to_return.push(*next);
+                    }
+                }
+                continue;
+            }
+        } 
         if curr_order == next_order {
+            prev_rank = curr_order;
             card_to_return.push(*curr);
             if let Some(last) = cards.last() {
                 if ptr::eq(next, last) {
@@ -154,10 +166,48 @@ pub fn is_four_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
                 }
             }
         } else {
-            if card_to_return.len() == 3 {
+            if curr_order == prev_rank {
                 card_to_return.push(*curr);
+            }
+        }
+        
+    }
+    card_to_return
+}
+
+// Poker Hand: Four of a Kind
+// Four cards with a matching rank. Suits may differ.
+// Base scoring: 60 chips x 4 mult
+pub fn is_four_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
+    let mut card_to_return: Vec<Card> = Vec::new();
+    let mut prev_rank = 0.0;
+
+     for (curr, next) in cards.iter().tuple_windows() {
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+
+        if prev_rank != 0.0 {
+            if curr_order == next_order && curr_order == prev_rank {
+                card_to_return.push(*curr);
+                if let Some(last) = cards.last() {
+                    if ptr::eq(next, last) {
+                        card_to_return.push(*next);
+                    }
+                }
+            }
+        } else {
+            if curr_order == next_order {
+                prev_rank = curr_order;
+                card_to_return.push(*curr);
+                if let Some(last) = cards.last() {
+                    if ptr::eq(next, last) {
+                        card_to_return.push(*next);
+                    }
+                }
             } else {
-                break; 
+                if curr_order == prev_rank {
+                    card_to_return.push(*curr);
+                }
             }
         }
     }
