@@ -247,6 +247,71 @@ pub fn is_five_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
     card_to_return
 }
 
+// Poker Hand: Flush House
+// Three cards with a matching rank, and two cards with any other matching rank, all from a single suit.
+// (an "illegal" hand)
+// Base scoring: 140 chips x 14 mult
+pub fn is_flush_house(cards: &Vec<Card>) -> Vec<Card> {
+    let mut card_to_return: Vec<Card> = Vec::new();
+    let base_suit = cards.first().unwrap().suit;
+    let mut prev_rank = 0.0;
+
+     for (curr, next) in cards.iter().tuple_windows() {
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+
+        if prev_rank != 0.0 {
+            if curr_order == next_order && curr.suit == base_suit && curr_order != prev_rank {
+                card_to_return.push(*curr);
+                if let Some(last) = cards.last() {
+                    if ptr::eq(next, last) {
+                        card_to_return.push(*next);
+                    }
+                }
+                continue;
+            }
+        } 
+        if curr_order == next_order && curr.suit == base_suit {
+            prev_rank = curr_order;
+            card_to_return.push(*curr);
+            if let Some(last) = cards.last() {
+                if ptr::eq(next, last) {
+                    card_to_return.push(*next);
+                }
+            }
+        } else {
+            if curr_order == prev_rank && curr.suit == base_suit {
+                card_to_return.push(*curr);
+            }
+        }
+        
+    }
+    card_to_return
+}
+
+// Poker Hand: Flush Five
+// Five cards with the same rank and same suit.
+// (an "illegal" hand)
+// Base scoring: 160 chips x 16 mult
+pub fn is_flush_five(cards: &Vec<Card>) -> Vec<Card> {
+    let mut card_to_return: Vec<Card> = Vec::new();
+    let base_suit = cards.first().unwrap().suit;
+
+     for (curr, next) in cards.iter().tuple_windows() {
+        let curr_order = compute_card_order(*curr);
+        let next_order = compute_card_order(*next);
+        if curr_order == next_order && curr.suit == base_suit {
+            card_to_return.push(*curr);
+            if let Some(last) = cards.last() {
+                if ptr::eq(next, last) {
+                    card_to_return.push(*next);
+                }
+            }
+        } 
+    }
+    card_to_return
+}
+
 
 pub fn compute_card_order(card: Card) -> f64 {
     let return_value = match card.rank {
@@ -272,7 +337,23 @@ pub fn compute_card_order(card: Card) -> f64 {
 pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     let mut return_card;
 
-    // Check if a four of a kind  exists
+    // Check if a flush five  exists
+    return_card = is_flush_five(&cards);
+    // println!("{:?}", return_card);
+    if return_card.len() == 5 {
+        println!("IS FLUSH FIVE");
+        return (PokerHand::FlushFive, return_card);
+    }
+
+    // Check if a flush house  exists
+    return_card = is_flush_house(&cards);
+    // println!("{:?}", return_card);
+    if return_card.len() == 5 {
+        println!("IS FLUSH HOUSE");
+        return (PokerHand::FlushHouse, return_card);
+    }
+
+    // Check if a five of a kind  exists
     return_card = is_five_of_a_kind(&cards);
     // println!("{:?}", return_card);
     if return_card.len() == 5 {
@@ -280,7 +361,7 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
         return (PokerHand::FiveOfAKind, return_card);
     }
 
-    // Check if a four of a kind  exists
+    // Check if a straight flush exists
     return_card = is_straight_flush(&cards);
     // println!("{:?}", return_card);
     if return_card.len() == 5 {
