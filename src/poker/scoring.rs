@@ -14,7 +14,7 @@ pub fn score(round: Round) -> (Chips, Mult) {
   // println!("{:?}", sorted_cards_played);
   let (hand, return_card) = determine_poker_hand(sorted_cards_played);
 
-  println!("{:?}", return_card);
+  // println!("{:?}", return_card);
 
 
   let (base_chip, base_mul) = hand.hand_value();
