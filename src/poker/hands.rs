@@ -194,21 +194,16 @@ pub fn is_four_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
                         card_to_return.push(*next);
                     }
                 }
+            } else if curr_order != next_order {
+                if curr_order == prev_rank {
+                    card_to_return.push(*curr);
+                }
             }
         } else {
             if curr_order == next_order {
                 prev_rank = curr_order;
                 card_to_return.push(*curr);
-                if let Some(last) = cards.last() {
-                    if ptr::eq(next, last) {
-                        card_to_return.push(*next);
-                    }
-                }
-            } else {
-                if curr_order == prev_rank {
-                    card_to_return.push(*curr);
-                }
-            }
+            } 
         }
     }
     card_to_return
@@ -339,88 +334,82 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
 
     // Check if a flush five  exists
     return_card = is_flush_five(&cards);
-    // println!("{:?}", return_card);
     if return_card.len() == 5 {
-        // println!("IS FLUSH FIVE");
+        println!("IS FLUSH FIVE");
         return (PokerHand::FlushFive, return_card);
     }
 
     // Check if a flush house  exists
     return_card = is_flush_house(&cards);
-    // println!("{:?}", return_card);
     if return_card.len() == 5 {
-        // println!("IS FLUSH HOUSE");
+        println!("IS FLUSH HOUSE");
         return (PokerHand::FlushHouse, return_card);
     }
 
     // Check if a five of a kind  exists
     return_card = is_five_of_a_kind(&cards);
-    // println!("{:?}", return_card);
     if return_card.len() == 5 {
-        // println!("IS FIVE OF A KIND");
+        println!("IS FIVE OF A KIND");
         return (PokerHand::FiveOfAKind, return_card);
     }
 
     // Check if a straight flush exists
     return_card = is_straight_flush(&cards);
-    // println!("{:?}", return_card);
     if return_card.len() == 5 {
-        // println!("IS STRAIGHT FLUSH");
+        println!("IS STRAIGHT FLUSH");
         return (PokerHand::StraightFlush, return_card);
     }
 
     // Check if a four of a kind  exists
     return_card = is_four_of_a_kind(&cards);
-    // println!("{:?}", return_card);
     if return_card.len() == 4 {
-        // println!("IS FOUR OF A KIND");
+        println!("IS FOUR OF A KIND");
         return (PokerHand::FourOfAKind, return_card);
     }
 
     // Check if a full house exists
     return_card = is_full_house(&cards);
-    // println!("{:?}", return_card);
     if return_card.len() == 5 {
-        // println!("IS FULL HOUSE");
+        println!("IS FULL HOUSE");
         return (PokerHand::FullHouse, return_card);
     }
 
     // Check if a flush exists
     return_card = is_flush(&cards);
     if return_card.len() == 5 {
-        // println!("IS FLUSH");
+        println!("IS FLUSH");
         return (PokerHand::Flush, return_card);
     }
     
     // Check if a straight exists
     return_card = is_straight(&cards);
     if return_card.len() == 5 {
-        // println!("IS STRAIGHT");
+        println!("IS STRAIGHT");
         return (PokerHand::Straight, return_card);
     }
     
     // Check if a three of a kind exists
     return_card = is_three_of_a_kind(&cards);
     if return_card.len() == 3 {
-        // println!("IS THREE OF A KIND");
+        println!("IS THREE OF A KIND");
         return (PokerHand::ThreeOfAKind, return_card);
     }
 
     // Check if a pair exists
     return_card = is_two_pair(&cards);
     if return_card.len() == 4 {
-        // println!("IS TWO PAIR");
+        println!("IS TWO PAIR");
         return (PokerHand::TwoPair, return_card);
     }
     
     // Check if a pair exists
     return_card = is_pair(&cards);
     if return_card.len() == 2 {
-        // println!("IS PAIR");
+        println!("IS PAIR");
         return (PokerHand::Pair, return_card);
     }
 
     // Default/base case when no other poker hands exist
-    // println!("IS HIGH CARD");
+    println!("IS HIGH CARD");
     (PokerHand::HighCard, is_high_card(&cards))
 }

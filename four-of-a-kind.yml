@@ -1,9 +1,9 @@
 cards_played:
-  - J♥
-  - J♣
-  - J♦
   - 3♥
-  - J♠
+  - J♦
+  - 3♣
+  - 3♥
+  - 3♠
 
 cards_held_in_hand: []
 
