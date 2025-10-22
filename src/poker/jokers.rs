@@ -55,7 +55,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   } 
 
   // Droll and Crafty Joker
-  check = vec![PokerHand::Flush, PokerHand::FlushFive, PokerHand::FlushHouse];
+  check = vec![PokerHand::Flush, PokerHand::FlushFive, PokerHand::FlushHouse, PokerHand::FourOfAKind];
   if check.contains(&hand) {
     if joker == Joker::DrollJoker {
       res.1 += 10.0;
