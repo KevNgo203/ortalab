@@ -20,7 +20,7 @@ fn apply_enhancement(enhancement: Enhancement, input_chip: f64, input_mul: f64, 
   (chip, mul)
 }
 
-fn apply_edition(edition: Edition, input_chip: f64, input_mul: f64, in_hand: bool) -> (Chips, Mult) {
+pub fn apply_edition(edition: Edition, input_chip: f64, input_mul: f64, in_hand: bool) -> (Chips, Mult) {
  let (mut chip, mut mul) = (input_chip, input_mul);
 
   if !in_hand {
