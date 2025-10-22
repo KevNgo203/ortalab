@@ -1,7 +1,7 @@
 use std::ptr;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use ortalib::{Card, PokerHand, Rank};
+use ortalib::{Card, Enhancement, PokerHand, Rank};
 
 // Poker Hand: High Card
 // When no other poker hand is possible, the one highest card in your played hand. 
@@ -129,6 +129,13 @@ fn is_flush(cards: &Vec<Card>) -> Vec<Card> {
     cards.iter().for_each(|card| {
         if card.suit == base_suit {
             card_to_return.push(*card);
+        } 
+        else {
+            if let Some(enhance) = card.enhancement {
+                if enhance == Enhancement::Wild {
+                    card_to_return.push(*card);
+                }
+            }
         }
     });
     card_to_return
@@ -248,37 +255,108 @@ fn is_five_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
 // Base scoring: 140 chips x 14 mult
 fn is_flush_house(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
-    let base_suit = cards.first().unwrap().suit;
     let mut prev_rank = 0.0;
+
+    // Comput base_suit based on the most appear suit
+    let base_suit = cards
+        .iter()
+        .counts_by(|c| c.suit)
+        .into_iter()
+        .max_by_key(|(_, count)| *count)
+        .map(|(suit, _)| suit)
+        .unwrap();
 
      for (curr, next) in cards.iter().tuple_windows() {
         let curr_order = compute_card_order(*curr);
         let next_order = compute_card_order(*next);
 
         if prev_rank != 0.0 {
-            if curr_order == next_order && curr.suit == base_suit && curr_order != prev_rank {
-                card_to_return.push(*curr);
-                if let Some(last) = cards.last() {
-                    if ptr::eq(next, last) {
-                        card_to_return.push(*next);
+            if curr_order == next_order && curr_order != prev_rank {
+                if curr.suit == base_suit {
+                    card_to_return.push(*curr);
+                } else {
+                    if let Some(enhance) = curr.enhancement {
+                        if enhance == Enhancement::Wild {
+                            card_to_return.push(*curr);
+                        }
                     }
                 }
+
+                if let Some(last) = cards.last() {
+                    if ptr::eq(next, last) {
+                        if next.suit == base_suit {
+                            card_to_return.push(*next);
+                        } else {
+                            if let Some(enhance) = next.enhancement {
+                                if enhance == Enhancement::Wild {
+                                    card_to_return.push(*next);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 continue;
             }
+
+
+            // if curr_order == next_order && curr.suit == base_suit && curr_order != prev_rank {
+            //     card_to_return.push(*curr);
+            //     if let Some(last) = cards.last() {
+            //         if ptr::eq(next, last) {
+            //             card_to_return.push(*next);
+            //         }
+            //     }
+            //     continue;
+            // }
         } 
-        if curr_order == next_order && curr.suit == base_suit {
+
+        if curr_order == next_order {
             prev_rank = curr_order;
-            card_to_return.push(*curr);
-            if let Some(last) = cards.last() {
-                if ptr::eq(next, last) {
-                    card_to_return.push(*next);
+            if curr.suit == base_suit {
+                card_to_return.push(*curr);
+            } else {
+                if let Some(enhance) = curr.enhancement {
+                    if enhance == Enhancement::Wild {
+                        card_to_return.push(*curr);
+                    }
                 }
             }
         } else {
-            if curr_order == prev_rank && curr.suit == base_suit {
-                card_to_return.push(*curr);
+            if curr_order == prev_rank {
+                if curr.suit == base_suit {
+                    card_to_return.push(*curr);
+                } else {
+                    if let Some(enhance) = curr.enhancement {
+                        if enhance == Enhancement::Wild {
+                            card_to_return.push(*curr);
+                        }
+                    }
+                }
             }
         }
+
+
+
+        // if curr_order == next_order && curr.suit == base_suit {
+        //     prev_rank = curr_order;
+        //     card_to_return.push(*curr);
+        //     // if let Some(last) = cards.last() {
+        //     //     if ptr::eq(next, last) {
+        //     //         card_to_return.push(*next);
+        //     //     }
+        //     // }
+        // } else if curr_order != next_order {
+        //     if curr_order == prev_rank && curr.suit == base_suit {
+        //         card_to_return.push(*curr);
+        //     } else if curr_order == prev_rank && curr.suit != base_suit {
+        //         if let Some(enhance) = curr.enhancement {
+        //             if enhance == Enhancement::Wild {
+        //                 card_to_return.push(*curr);
+        //             }
+        //         }
+        //     }
+        // }
         
     }
     card_to_return
@@ -337,6 +415,7 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     .sorted_by_key(|&card| OrderedFloat(compute_card_order(*card)))
     .map(|&card| card)
     .collect();
+    println!("return: {:?}", sorted_cards_played);
 
     // Check if a flush five  exists
     return_card = is_flush_five(&sorted_cards_played);
@@ -348,7 +427,7 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     // Check if a flush house  exists
     return_card = is_flush_house(&sorted_cards_played);
     if return_card.len() == 5 {
-        // println!("IS FLUSH HOUSE");
+        println!("IS FLUSH HOUSE");
         return (PokerHand::FlushHouse, cards);
     }
 
@@ -376,42 +455,42 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     // Check if a full house exists
     return_card = is_full_house(&sorted_cards_played);
     if return_card.len() == 5 {
-        // println!("IS FULL HOUSE");
+        println!("IS FULL HOUSE");
         return (PokerHand::FullHouse, cards);
     }
 
     // Check if a flush exists
     return_card = is_flush(&sorted_cards_played);
     if return_card.len() == 5 {
-        // println!("IS FLUSH");
+        println!("IS FLUSH");
         return (PokerHand::Flush, cards);
     }
     
     // Check if a straight exists
     return_card = is_straight(&sorted_cards_played);
     if return_card.len() == 5 {
-        // println!("IS STRAIGHT");
+        println!("IS STRAIGHT");
         return (PokerHand::Straight, cards);
     }
     
     // Check if a three of a kind exists
     return_card = is_three_of_a_kind(&sorted_cards_played);
     if return_card.len() == 3 {
-        // println!("IS THREE OF A KIND");
+        println!("IS THREE OF A KIND");
         return (PokerHand::ThreeOfAKind, return_card);
     }
 
     // Check if a pair exists
     return_card = is_two_pair(&sorted_cards_played);
     if return_card.len() == 4 {
-        // println!("IS TWO PAIR");
+        println!("IS TWO PAIR");
         return (PokerHand::TwoPair, return_card);
     }
     
     // Check if a pair exists
     return_card = is_pair(&sorted_cards_played);
     if return_card.len() == 2 {
-        // println!("IS PAIR");
+        println!("IS PAIR");
         return (PokerHand::Pair, return_card);
     }
 

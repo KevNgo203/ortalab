@@ -1,9 +1,9 @@
 cards_played:
+  - 7♥ Wild
+  - 4♦
   - 4♦
   - 7♦
-  - 4♦
-  - 7♦
-  - 7♦
+  - 4♥ Wild
 
 cards_held_in_hand: []
 
