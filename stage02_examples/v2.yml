@@ -1,0 +1,10 @@
+cards_played:
+  - 2♥
+  - 5♣ Wild
+  - 5♥
+  - 6♥
+  - 6♠ Wild
+
+cards_held_in_hand: []
+
+jokers: []
