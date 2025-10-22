@@ -1,7 +1,7 @@
 use std::ptr;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use ortalib::{Card, Enhancement, PokerHand, Rank};
+use ortalib::{Card, Enhancement, PokerHand, Rank, Suit};
 
 // Poker Hand: High Card
 // When no other poker hand is possible, the one highest card in your played hand. 
@@ -119,12 +119,24 @@ fn is_straight(cards: &Vec<Card>) -> Vec<Card> {
     card_to_return
 }
 
+
+// Helper function for Flush-based Hand, which computes the most appear suit
+fn compute_most_appear_suit(cards: &Vec<Card>) -> Suit {
+    cards
+        .iter()
+        .counts_by(|c| c.suit)
+        .into_iter()
+        .max_by_key(|(_, count)| *count)
+        .map(|(suit, _)| suit)
+        .unwrap()
+}
+
 // Poker Hand: Flush
 // Five cards of any rank, all from a single suit.
 // Base scoring: 35 chips x 4 mult
 fn is_flush(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
-    let base_suit = cards.first().unwrap().suit;
+    let base_suit = compute_most_appear_suit(cards);
 
     cards.iter().for_each(|card| {
         if card.suit == base_suit {
@@ -256,15 +268,7 @@ fn is_five_of_a_kind(cards: &Vec<Card>) -> Vec<Card> {
 fn is_flush_house(cards: &Vec<Card>) -> Vec<Card> {
     let mut card_to_return: Vec<Card> = Vec::new();
     let mut prev_rank = 0.0;
-
-    // Comput base_suit based on the most appear suit
-    let base_suit = cards
-        .iter()
-        .counts_by(|c| c.suit)
-        .into_iter()
-        .max_by_key(|(_, count)| *count)
-        .map(|(suit, _)| suit)
-        .unwrap();
+    let base_suit = compute_most_appear_suit(cards);
 
      for (curr, next) in cards.iter().tuple_windows() {
         let curr_order = compute_card_order(*curr);
@@ -298,17 +302,6 @@ fn is_flush_house(cards: &Vec<Card>) -> Vec<Card> {
 
                 continue;
             }
-
-
-            // if curr_order == next_order && curr.suit == base_suit && curr_order != prev_rank {
-            //     card_to_return.push(*curr);
-            //     if let Some(last) = cards.last() {
-            //         if ptr::eq(next, last) {
-            //             card_to_return.push(*next);
-            //         }
-            //     }
-            //     continue;
-            // }
         } 
 
         if curr_order == next_order {
@@ -335,29 +328,6 @@ fn is_flush_house(cards: &Vec<Card>) -> Vec<Card> {
                 }
             }
         }
-
-
-
-        // if curr_order == next_order && curr.suit == base_suit {
-        //     prev_rank = curr_order;
-        //     card_to_return.push(*curr);
-        //     // if let Some(last) = cards.last() {
-        //     //     if ptr::eq(next, last) {
-        //     //         card_to_return.push(*next);
-        //     //     }
-        //     // }
-        // } else if curr_order != next_order {
-        //     if curr_order == prev_rank && curr.suit == base_suit {
-        //         card_to_return.push(*curr);
-        //     } else if curr_order == prev_rank && curr.suit != base_suit {
-        //         if let Some(enhance) = curr.enhancement {
-        //             if enhance == Enhancement::Wild {
-        //                 card_to_return.push(*curr);
-        //             }
-        //         }
-        //     }
-        // }
-        
     }
     card_to_return
 }
