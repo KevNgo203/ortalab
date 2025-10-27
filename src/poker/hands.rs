@@ -411,7 +411,7 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     // Check if a straight flush exists
     return_card = is_straight_flush(&sorted_cards_played);
     if return_card.len() == 5 {
-        println!("IS STRAIGHT FLUSH");
+        // println!("IS STRAIGHT FLUSH");
         return (PokerHand::StraightFlush, cards);
     }
 
