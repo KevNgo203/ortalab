@@ -13,7 +13,7 @@ pub fn score(round: Round) -> (Chips, Mult) {
   result.0 = return_card
   .iter()
   .fold(result.0, |acc, x| acc + x.rank.rank_value());
-    println!("{} {}", result.0, result.1);
+    // println!("{} {}", result.0, result.1);
  
  
   // ------------------ Stage 02 ------------------ 
@@ -27,7 +27,7 @@ pub fn score(round: Round) -> (Chips, Mult) {
 
   // ------------------ Stage 03 ------------------ 
   // Apply jokers effect for joker cards 
-  println!("{:?}", round.jokers);
+  // println!("{:?}", round.jokers);
   result = joker_application(round.jokers, &round.cards_held_in_hand, &return_card, hand, result.0, result.1);
 
   (result.0, result.1)

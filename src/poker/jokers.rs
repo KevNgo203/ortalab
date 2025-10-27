@@ -10,7 +10,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   // Base Joker
   if joker == Joker::Joker {
     res.1 += 4.0;
-    dbg!(res);
+    // dbg!(res);
   } 
 
   // Jolly and Sly Joker
@@ -18,7 +18,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   if check.contains(&hand) {
     if joker == Joker::JollyJoker {
       res.1 += 8.0;
-      dbg!(res);
+      // dbg!(res);
     } else if joker == Joker::SlyJoker {
       res.0 += 50.0;
     } 
@@ -29,7 +29,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   if check.contains(&hand) {
     if joker == Joker::ZanyJoker {
       res.1 += 12.0;
-      dbg!(res);
+      // dbg!(res);
     } else if joker == Joker::WilyJoker {
       res.0 += 100.0;
     } 
@@ -69,7 +69,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   // Abstract Joker
   if joker == Joker::AbstractJoker {
     res.1 += 3.0 * joker_cards_len as f64;
-    dbg!(res);
+    // dbg!(res);
   }
 
   (res.0, res.1)
@@ -112,7 +112,7 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
         res.1 *= 1.5;
       }
     });
-    dbg!(res);
+    // dbg!(res);
   }
 
   // Greedy Joker 
