@@ -10,6 +10,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   // Base Joker
   if joker == Joker::Joker {
     res.1 += 4.0;
+    dbg!(res);
   } 
 
   // Jolly and Sly Joker
@@ -17,6 +18,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   if check.contains(&hand) {
     if joker == Joker::JollyJoker {
       res.1 += 8.0;
+      dbg!(res);
     } else if joker == Joker::SlyJoker {
       res.0 += 50.0;
     } 
@@ -27,6 +29,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   if check.contains(&hand) {
     if joker == Joker::ZanyJoker {
       res.1 += 12.0;
+      dbg!(res);
     } else if joker == Joker::WilyJoker {
       res.0 += 100.0;
     } 
@@ -66,6 +69,7 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
   // Abstract Joker
   if joker == Joker::AbstractJoker {
     res.1 += 3.0 * joker_cards_len as f64;
+    dbg!(res);
   }
 
   (res.0, res.1)
@@ -79,8 +83,7 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   if joker == Joker::RaisedFist {
     let lowest_rank_card = on_held.iter().min_by_key(|&card| OrderedFloat(card.rank.rank_value())).unwrap();
     let vec_lowest_rank_card = on_held.iter().filter(|&card| card.rank.rank_value() == lowest_rank_card.rank.rank_value());
-
-    vec_lowest_rank_card.for_each(|card| res.1 += card.rank.rank_value() as f64 * 2.0);
+    res.1 += vec_lowest_rank_card.last().unwrap().rank.rank_value() as f64 * 2.0;
 
     // TODO retriggers
   }
@@ -108,7 +111,8 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
       if card.rank == Rank::King {
         res.1 *= 1.5;
       }
-    })
+    });
+    dbg!(res);
   }
 
   // Greedy Joker 
@@ -219,10 +223,11 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
 
   // Photograph
   if joker == Joker::Photograph {
-    let firt_check = false;
+    let mut firt_check = false;
     on_scored.iter().for_each(|&card| {
       if card.rank.is_face() && !firt_check {
         res.1 *= 2.0;
+        firt_check = true;
       }
 
       // TODO: Handle retriggers
@@ -261,18 +266,50 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
 // ------------------------------- Hard Joker -------------------------------
 
 
-pub fn joker_application(cards: Vec<JokerCard>, on_held_cards: &Vec<Card>, on_scored_cards: &Vec<Card>, hand: PokerHand, chip: f64, mul: f64) -> (Chips, Mult) {
+pub fn joker_application(joker_cards: Vec<JokerCard>, on_held_cards: &Vec<Card>, on_scored_cards: &Vec<Card>, hand: PokerHand, chip: f64, mul: f64) -> (Chips, Mult) {
   let mut new_result = (chip, mul);
+  let independent_jokers = vec![Joker::Joker, Joker::JollyJoker, Joker::ZanyJoker, Joker::MadJoker, Joker::CrazyJoker, Joker::DrollJoker, Joker::SlyJoker, Joker::WilyJoker, Joker::CleverJoker, Joker::DeviousJoker, Joker::CraftyJoker, Joker::AbstractJoker, Joker::Blackboard, Joker::FlowerPot];
+  let on_scored_jokers = vec![Joker::GreedyJoker, Joker::LustyJoker, Joker::WrathfulJoker, Joker::GluttonousJoker, Joker::Fibonacci, Joker::ScaryFace, Joker::EvenSteven, Joker::OddTodd, Joker::Photograph, Joker::SmileyFace];
+  let on_held_jokers = vec![Joker::RaisedFist, Joker::Baron];
 
-  cards.iter().for_each(|card| {
-    new_result = apply_easy_jokers(card.joker, hand, cards.len(), new_result.0, new_result.1);
-    new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
-    new_result = if let Some(edition) = card.edition {
-      apply_edition(edition, new_result.0, new_result.1, false)
-    } else {
-      new_result
-    };
-  });
+  joker_cards.iter()
+    .filter(|card| on_scored_jokers.contains(&card.joker))
+    .for_each(|card| {
+      new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
+    });
+
+  joker_cards.iter()
+    .filter(|card| on_held_jokers.contains(&card.joker))
+    .for_each(|card| {
+      new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
+    });
+
+  joker_cards.iter()
+    .filter(|card| independent_jokers.contains(&card.joker))
+    .for_each(|card| {
+      new_result = apply_easy_jokers(card.joker, hand, joker_cards.len(), new_result.0, new_result.1);
+      new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
+    });
+
+  // Apply edition 
+  joker_cards.iter()
+    .for_each(|card| {
+      new_result = if let Some(edition) = card.edition {
+        apply_edition(edition, new_result.0, new_result.1, false)
+      } else {
+        new_result
+      };
+    });
+  
+
+  // cards.iter().for_each(|card| {
+  //   new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
+  //   new_result = if let Some(edition) = card.edition {
+  //     apply_edition(edition, new_result.0, new_result.1, false)
+  //   } else {
+  //     new_result
+  //   };
+  // });
   
   (new_result.0, new_result.1)
 }
