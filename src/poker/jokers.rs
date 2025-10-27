@@ -114,9 +114,13 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   // Greedy Joker 
   if joker == Joker::GreedyJoker {
     on_scored.iter().for_each(|&card| {
-      if let Some(enhance) = card.enhancement {
-        if enhance == Enhancement::Wild || card.suit == Suit::Diamonds {
-          res.1 += 3.0;
+      if card.suit == Suit::Diamonds {
+        res.1 += 3.0;
+      } else {
+        if let Some(enhance) = card.enhancement {
+          if  enhance == Enhancement::Wild {
+            res.1 += 3.0;
+          }
         }
       }
     })
@@ -125,9 +129,13 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   // Lusty Joker 
   if joker == Joker::LustyJoker {
     on_scored.iter().for_each(|&card| {
-      if let Some(enhance) = card.enhancement {
-        if enhance == Enhancement::Wild || card.suit == Suit::Hearts {
-          res.1 += 3.0;
+      if card.suit == Suit::Hearts {
+        res.1 += 3.0;
+      } else {
+        if let Some(enhance) = card.enhancement {
+          if  enhance == Enhancement::Wild {
+            res.1 += 3.0;
+          }
         }
       }
     })
@@ -136,9 +144,13 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   // Wrathful Joker 
   if joker == Joker::WrathfulJoker {
     on_scored.iter().for_each(|&card| {
-      if let Some(enhance) = card.enhancement {
-        if enhance == Enhancement::Wild || card.suit == Suit::Spades {
-          res.1 += 3.0;
+      if card.suit == Suit::Spades {
+        res.1 += 3.0;
+      } else {
+        if let Some(enhance) = card.enhancement {
+          if  enhance == Enhancement::Wild {
+            res.1 += 3.0;
+          }
         }
       }
     })
@@ -147,9 +159,13 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   // Gluttonus Joker 
   if joker == Joker::GluttonousJoker {
     on_scored.iter().for_each(|&card| {
-      if let Some(enhance) = card.enhancement {
-        if enhance == Enhancement::Wild || card.suit == Suit::Clubs {
-          res.1 += 3.0;
+      if card.suit == Suit::Clubs {
+        res.1 += 3.0;
+      } else {
+        if let Some(enhance) = card.enhancement {
+          if  enhance == Enhancement::Wild {
+            res.1 += 3.0;
+          }
         }
       }
     })
@@ -202,7 +218,7 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   }
 
   // Photograph
-  if joker == Joker::OddTodd {
+  if joker == Joker::Photograph {
     let firt_check = false;
     on_scored.iter().for_each(|&card| {
       if card.rank.is_face() && !firt_check {
@@ -214,7 +230,7 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   }
 
   // Smiley Face
-  if joker == Joker::OddTodd {
+  if joker == Joker::SmileyFace {
     on_scored.iter().for_each(|&card| {
       if card.rank.is_face() {
         res.1 += 5.0;
