@@ -33,8 +33,9 @@ pub fn apply_edition(edition: Edition, input_chip: f64, input_mul: f64, in_hand:
   (chip, mul)
 }
 
-pub fn compute_enhancement(cards: Vec<Card>, chip: f64, mul: f64, in_hand: bool) -> (Chips, Mult) {
+pub fn compute_enhancement(cards: &Vec<Card>, chip: f64, mul: f64, in_hand: bool) -> (Chips, Mult) {
   let (mut new_chip, mut new_mul) = (chip, mul);
+  
   cards.iter().for_each(|card| {
     if let Some(enhancement) = card.enhancement {
       let result = apply_enhancement(enhancement, new_chip, new_mul, in_hand);
@@ -47,7 +48,6 @@ pub fn compute_enhancement(cards: Vec<Card>, chip: f64, mul: f64, in_hand: bool)
       new_chip = result.0;
       new_mul = result.1;
     }
-    // dbg!(new_mul);
   });
 
   (new_chip, new_mul)
