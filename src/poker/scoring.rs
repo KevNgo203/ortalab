@@ -18,18 +18,18 @@ pub fn score(round: Round) -> (Chips, Mult) {
  
   // ------------------ Stage 02 ------------------ 
   // Apply modifiers for cards played
-  result = compute_enhancement(return_card, result.0, result.1, false);
+  result = compute_enhancement(&return_card, result.0, result.1, false);
   // println!("{} {}", enhanced_chip, enhanced_mul);
 
   // Apply modifiers for cards held in hand
-  result = compute_enhancement(round.cards_held_in_hand, result.0, result.1, true);
+  result = compute_enhancement(&round.cards_held_in_hand, result.0, result.1, true);
   // println!("{} {}", chip, mul);
 
   // ------------------ Stage 03 ------------------ 
   // Apply jokers effect for joker cards 
-  result = joker_application(round.jokers, hand, result.0, result.1);
+  result = joker_application(round.jokers, &round.cards_held_in_hand, &return_card, hand, result.0, result.1);
 
   (result.0, result.1)
-    // (1.0, 1.0)
+  // (1.0, 1.0)
 }
 

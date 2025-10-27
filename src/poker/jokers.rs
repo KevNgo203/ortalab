@@ -1,10 +1,9 @@
-use ortalib::{Chips, Joker, JokerCard, Mult, PokerHand};
+use ordered_float::OrderedFloat;
+use ortalib::{Card, Chips, Enhancement, Joker, JokerCard, Mult, PokerHand, Rank, Suit};
 use crate::poker::apply_edition;
+use crate::poker::hands::compute_card_order;
 
 // ------------------------------- Easy Joker -------------------------------
-
-
-
 fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip: f64, mul: f64) -> (Chips, Mult) {
   let mut res = (chip, mul);
 
@@ -73,16 +72,185 @@ fn apply_easy_jokers(joker: Joker, hand: PokerHand, joker_cards_len: usize, chip
 }
 
 // ------------------------------- Medium Joker -------------------------------
+fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>, chip: f64, mul: f64) -> (Chips, Mult) {
+  let mut res = (chip, mul);
+  let mut on_held_iter = on_held.iter();
+
+  if joker == Joker::RaisedFist {
+    let lowest_rank_card = on_scored.iter().min_by_key(|&card| OrderedFloat(card.rank.rank_value())).unwrap();
+    let vec_lowest_rank_card = on_scored.iter().filter(|&card| card.rank.rank_value() == lowest_rank_card.rank.rank_value());
+
+    vec_lowest_rank_card.for_each(|card| res.1 += card.rank.rank_value() as f64 * 2.0);
+
+    // TODO retriggers
+  }
+
+  // Blackboard Joker
+  if joker == Joker::Blackboard {
+    let vec_to_check = vec![Suit::Spades, Suit::Clubs];
+    let check = on_held_iter.all(|c| {
+      if let Some(enhance) = c.enhancement {
+        if enhance == Enhancement::Wild {
+          return true;
+        }
+      }
+      vec_to_check.contains(&c.suit)
+    });
+    
+    if check || on_held.len() == 0 { 
+      res.1 *= 3.0;
+    }
+  }
+
+  // Baron Joker 
+  if joker == Joker::Baron {
+    on_held_iter.for_each(|&card| {
+      if card.rank == Rank::King {
+        res.1 *= 1.5;
+      }
+    })
+  }
+
+  // Greedy Joker 
+  if joker == Joker::GreedyJoker {
+    on_scored.iter().for_each(|&card| {
+      if let Some(enhance) = card.enhancement {
+        if enhance == Enhancement::Wild || card.suit == Suit::Diamonds {
+          res.1 += 3.0;
+        }
+      }
+    })
+  }
+
+  // Lusty Joker 
+  if joker == Joker::LustyJoker {
+    on_scored.iter().for_each(|&card| {
+      if let Some(enhance) = card.enhancement {
+        if enhance == Enhancement::Wild || card.suit == Suit::Hearts {
+          res.1 += 3.0;
+        }
+      }
+    })
+  }
+
+  // Wrathful Joker 
+  if joker == Joker::WrathfulJoker {
+    on_scored.iter().for_each(|&card| {
+      if let Some(enhance) = card.enhancement {
+        if enhance == Enhancement::Wild || card.suit == Suit::Spades {
+          res.1 += 3.0;
+        }
+      }
+    })
+  }
+
+  // Gluttonus Joker 
+  if joker == Joker::GluttonousJoker {
+    on_scored.iter().for_each(|&card| {
+      if let Some(enhance) = card.enhancement {
+        if enhance == Enhancement::Wild || card.suit == Suit::Clubs {
+          res.1 += 3.0;
+        }
+      }
+    })
+  }
+
+  // Fibonacci Joker
+  if joker == Joker::Fibonacci {
+    on_scored.iter().for_each(|&card| {
+      if card.rank == Rank::Ace ||
+        card.rank == Rank::Two ||
+        card.rank == Rank::Three || 
+        card.rank == Rank::Five || 
+        card.rank == Rank::Eight {
+          res.1 += 8.0;
+        } 
+    })
+  }
+
+  // Scary Face
+  if joker == Joker::ScaryFace {
+    on_scored.iter().for_each(|&card| {
+      if card.rank.is_face() {
+        res.0 += 30.0;
+      }
+    })
+  }
+
+  // Even Steven 
+  if joker == Joker::EvenSteven {
+    on_scored.iter().for_each(|&card| {
+      let value = compute_card_order(card);
+      if  value <= 10.0 {
+        if value % 2.0 == 0.0 {
+          res.1 += 4.0;
+        }
+      }
+    })
+  }
+
+  // Odd Todd 
+  if joker == Joker::OddTodd {
+    on_scored.iter().for_each(|&card| {
+      let value = compute_card_order(card);
+      if value < 10.0 || value == 14.0 {
+        if value % 2.0 != 0.0 || value == 14.0 {
+          res.0 += 31.0;
+        }
+      }
+    })
+  }
+
+  // Photograph
+  if joker == Joker::OddTodd {
+    let firt_check = false;
+    on_scored.iter().for_each(|&card| {
+      if card.rank.is_face() && !firt_check {
+        res.1 *= 2.0;
+      }
+
+      // TODO: Handle retriggers
+    })
+  }
+
+  // Smiley Face
+  if joker == Joker::OddTodd {
+    on_scored.iter().for_each(|&card| {
+      if card.rank.is_face() {
+        res.1 += 5.0;
+      }
+    })
+  }
+  
+  // Flower pot 
+  if joker == Joker::FlowerPot {
+    if on_scored.len() >= 4 {
+      let having_diamonds = on_scored.iter().any(|c| c.suit == Suit::Diamonds);
+      let having_hearts = on_scored.iter().any(|c| c.suit == Suit::Hearts);
+      let having_spades = on_scored.iter().any(|c| c.suit == Suit::Spades);
+      let having_clubs = on_scored.iter().any(|c| c.suit == Suit::Clubs);
+      if having_diamonds &&
+        having_hearts && 
+        having_spades && 
+        having_clubs {
+          res.1 *= 3.0
+        }
+    }
+  }
+
+  (res.0, res.1)
+}
 
 
 // ------------------------------- Hard Joker -------------------------------
 
 
-pub fn joker_application(cards: Vec<JokerCard>, hand: PokerHand, chip: f64, mul: f64) -> (Chips, Mult) {
+pub fn joker_application(cards: Vec<JokerCard>, on_held_cards: &Vec<Card>, on_scored_cards: &Vec<Card>, hand: PokerHand, chip: f64, mul: f64) -> (Chips, Mult) {
   let mut new_result = (chip, mul);
 
   cards.iter().for_each(|card| {
     new_result = apply_easy_jokers(card.joker, hand, cards.len(), new_result.0, new_result.1);
+    new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
     new_result = if let Some(edition) = card.edition {
       apply_edition(edition, new_result.0, new_result.1, false)
     } else {
