@@ -77,8 +77,8 @@ fn apply_medium_jokers(joker: Joker, on_held: &Vec<Card>, on_scored: &Vec<Card>,
   let mut on_held_iter = on_held.iter();
 
   if joker == Joker::RaisedFist {
-    let lowest_rank_card = on_scored.iter().min_by_key(|&card| OrderedFloat(card.rank.rank_value())).unwrap();
-    let vec_lowest_rank_card = on_scored.iter().filter(|&card| card.rank.rank_value() == lowest_rank_card.rank.rank_value());
+    let lowest_rank_card = on_held.iter().min_by_key(|&card| OrderedFloat(card.rank.rank_value())).unwrap();
+    let vec_lowest_rank_card = on_held.iter().filter(|&card| card.rank.rank_value() == lowest_rank_card.rank.rank_value());
 
     vec_lowest_rank_card.for_each(|card| res.1 += card.rank.rank_value() as f64 * 2.0);
 
