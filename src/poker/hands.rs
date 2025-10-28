@@ -187,19 +187,22 @@ fn is_four_of_a_kind(cards: &[Card]) -> Vec<Card> {
         let curr_order = compute_card_order(*curr);
         let next_order = compute_card_order(*next);
 
-        if prev_rank != 0.0 && curr_order == next_order && curr_order == prev_rank {
+        if prev_rank == 0.0 && curr_order == next_order {
+            prev_rank = curr_order;
+            card_to_return.push(*curr);
+            continue;
+        }
+
+        if curr_order == next_order && curr_order == prev_rank {
             card_to_return.push(*curr);
             if let Some(last) = cards.last()
                 && ptr::eq(next, last)
             {
                 card_to_return.push(*next);
-            } 
-        } else if curr_order == next_order {
-            prev_rank = curr_order;
-            card_to_return.push(*curr);
+            }
         } else if curr_order != next_order && curr_order == prev_rank {
-			card_to_return.push(*curr);
-		}
+            card_to_return.push(*curr);
+        }
     }
     card_to_return
 }
