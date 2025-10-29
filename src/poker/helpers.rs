@@ -11,6 +11,3 @@ pub fn compute_most_appear_suit(cards: &[Card]) -> Suit {
         .map(|(suit, _)| suit)
         .unwrap()
 }
-
-// Helper function for determine the effect of Four Fingers Joker 
-// pub fn determine_four_fingers(return_card: Vec<Card>) -> 

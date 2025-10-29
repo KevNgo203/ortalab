@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use ortalib::{Card, Enhancement, Joker, JokerCard, PokerHand, Rank};
-use std::{collections::HashSet, ptr};
+use std::{collections::{HashMap, HashSet}, ptr};
 use crate::poker::helpers::{compute_most_appear_suit};
 
 // Poker Hand: High Card
@@ -88,28 +88,29 @@ fn is_three_of_a_kind(cards: &[Card]) -> Vec<Card> {
 // Five cards in consecutive order which are not all from the same suit. Aces can be counted high or low.
 // Base scoring: 30 chips x 4 mult
 fn is_straight(cards: &[Card]) -> Vec<Card> {
-    let mut card_to_return: HashSet<Card> = HashSet::new();
+    let mut card_to_return: HashMap<Card, i32> = HashMap::new();
 
     // Check for consecutive cards with values from 2 - A
     for (curr, next) in cards.iter().tuple_windows() {
         let curr_order = compute_card_order(*curr);
         let next_order = compute_card_order(*next);
         if next_order - curr_order == 1.0 {
-            card_to_return.insert(*curr);
-            card_to_return.insert(*next);
-            if let Some(last) = cards.last()
-                && ptr::eq(next, last)
-            {
-                card_to_return.insert(*next);
+            if !card_to_return.contains_key(curr) {
+                card_to_return.insert(*curr, 1);
+            }
+
+            if !card_to_return.contains_key(next) {
+                card_to_return.insert(*next, 1);
             }
         }
         // Handle case where Ace is the lowest value card (below 2)
         else if next.rank == Rank::Ace && curr.rank == Rank::Five {
-            card_to_return.insert(*curr);
-            card_to_return.insert(*next);
+            card_to_return.insert(*next, 1);
+        } else if next_order - curr_order != 1.0 {
+            card_to_return.clear();
         }
     }
-    card_to_return.iter().map(|&card| card).collect_vec()
+    card_to_return.iter().map(|(&card, _)| card).collect_vec()
 }
 
 // Poker Hand: Flush
@@ -205,9 +206,6 @@ fn is_straight_flush(cards: &[Card], is_four_finger_exists: bool) -> Vec<Card> {
     // let card_to_return = cards.clone();
     let mut returned_card_from_is_flush = is_flush(cards);
     let mut returned_card_from_is_straight = is_straight(cards);
-    
-    // dbg!(&returned_card_from_is_flush);
-    // dbg!(&returned_card_from_is_straight);
     
     if returned_card_from_is_flush.len() == 5 && returned_card_from_is_straight.len() == 5
     {
@@ -381,7 +379,7 @@ pub fn determine_poker_hand(cards: &[Card], jokers: &[JokerCard]) -> (PokerHand,
     if return_card.len() == 5 {
         // println!("IS STRAIGHT FLUSH");
         return (PokerHand::StraightFlush, cards.to_vec());
-    } else if return_card.len() == 4 {
+    } else if return_card.len() == 4 && is_four_finger_exists {
         // println!("IS STRAIGHT FLUSH");
         return (PokerHand::StraightFlush, return_card);
     }
