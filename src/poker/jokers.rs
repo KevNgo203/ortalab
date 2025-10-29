@@ -1,7 +1,6 @@
-use crate::poker::apply_edition;
-use crate::poker::hands::compute_card_order;
+use crate::poker::{apply_edition, compute_card_order, determine_current_suit, determine_total_colors};
 use ordered_float::OrderedFloat;
-use ortalib::{Card, Chips, Enhancement, Joker, JokerCard, Mult, PokerHand, Rank, Suit};
+use ortalib::{Card, Chips, Enhancement, Joker, JokerCard, Mult, PokerHand, Rank, Suit, SuitColor};
 
 // ------------------------------- Easy Joker -------------------------------
 fn apply_easy_jokers(
@@ -112,7 +111,8 @@ fn apply_medium_jokers(
     on_scored: &[Card],
     chip: f64,
     mul: f64,
-    is_pareidolia_exists: bool
+    is_pareidolia_exists: bool,
+    is_smeared_exists: bool
 ) -> (Chips, Mult) {
     let mut res = (chip, mul);
     let mut on_held_iter = on_held.iter();
@@ -160,7 +160,7 @@ fn apply_medium_jokers(
     // Greedy Joker
     if joker == Joker::GreedyJoker {
         on_scored.iter().for_each(|&card| {
-            if card.suit == Suit::Diamonds {
+            if card.suit == Suit::Diamonds || (card.suit == Suit::Hearts && is_smeared_exists) {
                 res.1 += 3.0;
             } else if let Some(enhance) = card.enhancement
                 && enhance == Enhancement::Wild
@@ -173,7 +173,7 @@ fn apply_medium_jokers(
     // Lusty Joker
     if joker == Joker::LustyJoker {
         on_scored.iter().for_each(|&card| {
-            if card.suit == Suit::Hearts {
+            if card.suit == Suit::Hearts || (card.suit == Suit::Diamonds && is_smeared_exists) {
                 res.1 += 3.0;
             } else if let Some(enhance) = card.enhancement
                 && enhance == Enhancement::Wild
@@ -186,7 +186,7 @@ fn apply_medium_jokers(
     // Wrathful Joker
     if joker == Joker::WrathfulJoker {
         on_scored.iter().for_each(|&card| {
-            if card.suit == Suit::Spades {
+            if card.suit == Suit::Spades || (card.suit == Suit::Clubs && is_smeared_exists) {
                 res.1 += 3.0;
             } else if let Some(enhance) = card.enhancement
                 && enhance == Enhancement::Wild
@@ -199,7 +199,7 @@ fn apply_medium_jokers(
     // Gluttonus Joker
     if joker == Joker::GluttonousJoker {
         on_scored.iter().for_each(|&card| {
-            if card.suit == Suit::Clubs {
+            if card.suit == Suit::Clubs || (card.suit == Suit::Spades && is_smeared_exists){
                 res.1 += 3.0;
             } else if let Some(enhance) = card.enhancement
                 && enhance == Enhancement::Wild
@@ -276,13 +276,17 @@ fn apply_medium_jokers(
 
     // Flower pot
     if joker == Joker::FlowerPot && on_scored.len() >= 4 {
-        let having_diamonds = on_scored.iter().any(|c| c.suit == Suit::Diamonds);
-        let having_hearts = on_scored.iter().any(|c| c.suit == Suit::Hearts);
-        let having_spades = on_scored.iter().any(|c| c.suit == Suit::Spades);
-        let having_clubs = on_scored.iter().any(|c| c.suit == Suit::Clubs);
-        if having_diamonds && having_hearts && having_spades && having_clubs {
+        let having_diamonds = determine_current_suit(on_scored, Suit::Diamonds);
+        let having_hearts = determine_current_suit(on_scored, Suit::Hearts);
+        let having_spades = determine_current_suit(on_scored, Suit::Spades);
+        let having_clubs = determine_current_suit(on_scored, Suit::Clubs);
+        let having_red_cards = determine_total_colors(on_scored, SuitColor::Red);
+        let having_black_cards = determine_total_colors(on_scored, SuitColor::Black);
+        
+        if (having_diamonds && having_hearts && having_spades && having_clubs) 
+        || (is_smeared_exists && having_red_cards && having_black_cards) {
             res.1 *= 3.0
-        }
+        } 
     }
 
     (res.0, res.1)
@@ -340,6 +344,8 @@ pub fn joker_application(
     let on_held_jokers = [Joker::RaisedFist, Joker::Baron, Joker::Mime];
     // let special_jokers = [Joker::FourFingers, Joker::Shortcut, Joker::Pareidolia, Joker::Splash, Joker::SmearedJoker, Joker::Blueprint];
     let is_pareidolia_exists = joker_cards.iter().any(|card| card.joker == Joker::Pareidolia);
+    let is_smeared_exists= joker_cards.iter().any(|card| card.joker == Joker::SmearedJoker);
+
     // joker_cards
     //     .iter()
     //     .filter(|card| special_jokers.contains(&card.joker))
@@ -357,7 +363,8 @@ pub fn joker_application(
                 on_scored_cards,
                 new_result.0,
                 new_result.1,
-                is_pareidolia_exists
+                is_pareidolia_exists,
+                is_smeared_exists
             );
             // new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
         });
@@ -372,7 +379,8 @@ pub fn joker_application(
                 on_scored_cards,
                 new_result.0,
                 new_result.1,
-                is_pareidolia_exists
+                is_pareidolia_exists,
+                is_smeared_exists
             );
             // new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
         });
@@ -394,7 +402,8 @@ pub fn joker_application(
                 on_scored_cards,
                 new_result.0,
                 new_result.1,
-                is_pareidolia_exists
+                is_pareidolia_exists,
+                is_smeared_exists
             );
         });
 

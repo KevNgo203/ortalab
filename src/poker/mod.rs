@@ -4,7 +4,7 @@ pub mod modifiers;
 pub mod scoring;
 pub mod helpers;
 
-pub use hands::determine_poker_hand;
+pub use hands::{determine_poker_hand, compute_card_order};
 pub use modifiers::apply_edition;
 pub use scoring::score;
-pub use helpers::{compute_most_appear_suit};
+pub use helpers::{compute_most_appear_suit, determine_current_suit, determine_total_colors};
