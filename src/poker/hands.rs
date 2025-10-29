@@ -1,7 +1,8 @@
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use ortalib::{Card, Enhancement, PokerHand, Rank, Suit};
-use std::ptr;
+use ortalib::{Card, Enhancement, Joker, JokerCard, PokerHand, Rank};
+use std::{collections::HashSet, ptr};
+use crate::poker::helpers::{compute_most_appear_suit};
 
 // Poker Hand: High Card
 // When no other poker hand is possible, the one highest card in your played hand.
@@ -87,38 +88,28 @@ fn is_three_of_a_kind(cards: &[Card]) -> Vec<Card> {
 // Five cards in consecutive order which are not all from the same suit. Aces can be counted high or low.
 // Base scoring: 30 chips x 4 mult
 fn is_straight(cards: &[Card]) -> Vec<Card> {
-    let mut card_to_return: Vec<Card> = Vec::new();
+    let mut card_to_return: HashSet<Card> = HashSet::new();
 
     // Check for consecutive cards with values from 2 - A
     for (curr, next) in cards.iter().tuple_windows() {
         let curr_order = compute_card_order(*curr);
         let next_order = compute_card_order(*next);
         if next_order - curr_order == 1.0 {
-            card_to_return.push(*curr);
+            card_to_return.insert(*curr);
+            card_to_return.insert(*next);
             if let Some(last) = cards.last()
                 && ptr::eq(next, last)
             {
-                card_to_return.push(*next);
+                card_to_return.insert(*next);
             }
         }
         // Handle case where Ace is the lowest value card (below 2)
-        else if next_order - curr_order == 9.0 {
-            card_to_return.push(*curr);
-            card_to_return.push(*next);
+        else if next.rank == Rank::Ace && curr.rank == Rank::Five {
+            card_to_return.insert(*curr);
+            card_to_return.insert(*next);
         }
     }
-    card_to_return
-}
-
-// Helper function for Flush-based Hand, which computes the most appear suit
-fn compute_most_appear_suit(cards: &[Card]) -> Suit {
-    cards
-        .iter()
-        .counts_by(|c| c.suit)
-        .into_iter()
-        .max_by_key(|(_, count)| *count)
-        .map(|(suit, _)| suit)
-        .unwrap()
+    card_to_return.iter().map(|&card| card).collect_vec()
 }
 
 // Poker Hand: Flush
@@ -210,10 +201,27 @@ fn is_four_of_a_kind(cards: &[Card]) -> Vec<Card> {
 // Poker Hand: Straight Flush
 // Five cards in consecutive order, all from the same suit. Aces can be counted high or low.
 // Base scoring: 100 chips x 8 mult
-fn is_straight_flush(cards: &[Card]) -> Vec<Card> {
+fn is_straight_flush(cards: &[Card], is_four_finger_exists: bool) -> Vec<Card> {
     // let card_to_return = cards.clone();
-    if is_flush(cards).len() == 5 && is_straight(cards).len() == 5 {
+    let mut returned_card_from_is_flush = is_flush(cards);
+    let mut returned_card_from_is_straight = is_straight(cards);
+    
+    // dbg!(&returned_card_from_is_flush);
+    // dbg!(&returned_card_from_is_straight);
+    
+    if returned_card_from_is_flush.len() == 5 && returned_card_from_is_straight.len() == 5
+    {
         return cards.to_vec();
+    } else if 
+    is_four_finger_exists && 
+    ((returned_card_from_is_flush.len() == 4 && returned_card_from_is_straight.len() == 4)
+    || (returned_card_from_is_flush.len() == 5 && returned_card_from_is_straight.len() == 4)
+    || (returned_card_from_is_flush.len() == 4 && returned_card_from_is_straight.len() == 5)
+    )
+    {
+        returned_card_from_is_flush.append(&mut returned_card_from_is_straight);
+        let returned_card_set = returned_card_from_is_flush.iter().collect::<HashSet<_>>();
+        return returned_card_set.iter().map(|&&card| card).collect_vec();
     }
 
     vec![]
@@ -336,42 +344,46 @@ pub fn compute_card_order(card: Card) -> f64 {
     }
 }
 
-pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
+pub fn determine_poker_hand(cards: &[Card], jokers: &[JokerCard]) -> (PokerHand, Vec<Card>) {
     let mut return_card;
-
     let sorted_cards_played: Vec<_> = cards
         .iter()
         .sorted_by_key(|&card| OrderedFloat(compute_card_order(*card)))
         .copied()
         .collect();
     // println!("return: {:?}", sorted_cards_played);
+    let is_four_finger_exists = jokers.iter().any(|card| card.joker == Joker::FourFingers);
 
     // Check if a flush five  exists
     return_card = is_flush_five(&sorted_cards_played);
-    if return_card.len() == 5 {
+    if return_card.len() == 5 || (return_card.len() == 4 && is_four_finger_exists) {
         // println!("IS FLUSH FIVE");
-        return (PokerHand::FlushFive, cards);
+        return (PokerHand::FlushFive, cards.to_vec());
     }
 
     // Check if a flush house  exists
     return_card = is_flush_house(&sorted_cards_played);
     if return_card.len() == 5 {
         // println!("IS FLUSH HOUSE");
-        return (PokerHand::FlushHouse, cards);
+        return (PokerHand::FlushHouse, cards.to_vec());
     }
 
     // Check if a five of a kind  exists
     return_card = is_five_of_a_kind(&sorted_cards_played);
     if return_card.len() == 5 {
         // println!("IS FIVE OF A KIND");
-        return (PokerHand::FiveOfAKind, cards);
+        return (PokerHand::FiveOfAKind, cards.to_vec());
     }
 
     // Check if a straight flush exists
-    return_card = is_straight_flush(&sorted_cards_played);
+    return_card = is_straight_flush(&sorted_cards_played, is_four_finger_exists);
+    // println!("return: {:?}", return_card);
     if return_card.len() == 5 {
         // println!("IS STRAIGHT FLUSH");
-        return (PokerHand::StraightFlush, cards);
+        return (PokerHand::StraightFlush, cards.to_vec());
+    } else if return_card.len() == 4 {
+        // println!("IS STRAIGHT FLUSH");
+        return (PokerHand::StraightFlush, return_card);
     }
 
     // Check if a four of a kind  exists
@@ -385,21 +397,28 @@ pub fn determine_poker_hand(cards: Vec<Card>) -> (PokerHand, Vec<Card>) {
     return_card = is_full_house(&sorted_cards_played);
     if return_card.len() == 5 {
         // println!("IS FULL HOUSE");
-        return (PokerHand::FullHouse, cards);
+        return (PokerHand::FullHouse, cards.to_vec());
     }
 
     // Check if a flush exists
     return_card = is_flush(&sorted_cards_played);
-    if return_card.len() == 5 {
+    if return_card.len() == 5 || (return_card.len() == 4 && is_four_finger_exists) 
+    {
         // println!("IS FLUSH");
-        return (PokerHand::Flush, cards);
+        return (PokerHand::Flush, cards.to_vec());
     }
 
     // Check if a straight exists
     return_card = is_straight(&sorted_cards_played);
-    if return_card.len() == 5 {
+    // println!("return: {:?}", return_card);
+    if return_card.len() == 5 
+    {
         // println!("IS STRAIGHT");
-        return (PokerHand::Straight, cards);
+        return (PokerHand::Straight, cards.to_vec());
+    } else if return_card.len() == 4 && is_four_finger_exists
+    {
+        // println!("IS STRAIGHT");
+        return (PokerHand::Straight, return_card);
     }
 
     // Check if a three of a kind exists

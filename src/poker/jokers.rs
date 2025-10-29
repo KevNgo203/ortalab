@@ -112,6 +112,7 @@ fn apply_medium_jokers(
     on_scored: &[Card],
     chip: f64,
     mul: f64,
+    is_pareidolia_exists: bool
 ) -> (Chips, Mult) {
     let mut res = (chip, mul);
     let mut on_held_iter = on_held.iter();
@@ -225,9 +226,9 @@ fn apply_medium_jokers(
     // Scary Face
     if joker == Joker::ScaryFace {
         on_scored.iter().for_each(|&card| {
-            if card.rank.is_face() {
+            if card.rank.is_face() || is_pareidolia_exists {
                 res.0 += 30.0;
-            }
+            } 
         })
     }
 
@@ -255,7 +256,7 @@ fn apply_medium_jokers(
     if joker == Joker::Photograph {
         let mut firt_check = false;
         on_scored.iter().for_each(|&card| {
-            if card.rank.is_face() && !firt_check {
+            if (card.rank.is_face() || is_pareidolia_exists) && !firt_check {
                 res.1 *= 2.0;
                 firt_check = true;
             }
@@ -267,7 +268,7 @@ fn apply_medium_jokers(
     // Smiley Face
     if joker == Joker::SmileyFace {
         on_scored.iter().for_each(|&card| {
-            if card.rank.is_face() {
+            if card.rank.is_face() || is_pareidolia_exists {
                 res.1 += 5.0;
             }
         })
@@ -288,9 +289,18 @@ fn apply_medium_jokers(
 }
 
 // ------------------------------- Hard Joker -------------------------------
+// fn apply_hard_jokers(joker: Joker, chip: f64, mul: f64) -> (Chips, Mult) {
+//     let mut res = (chip, mul);
+
+
+
+
+
+//     (res.0, res.1)
+// }
 
 pub fn joker_application(
-    joker_cards: Vec<JokerCard>,
+    joker_cards: &[JokerCard],
     on_held_cards: &[Card],
     on_scored_cards: &[Card],
     hand: PokerHand,
@@ -325,8 +335,17 @@ pub fn joker_application(
         Joker::OddTodd,
         Joker::Photograph,
         Joker::SmileyFace,
+        Joker::SockAndBuskin
     ];
-    let on_held_jokers = [Joker::RaisedFist, Joker::Baron];
+    let on_held_jokers = [Joker::RaisedFist, Joker::Baron, Joker::Mime];
+    // let special_jokers = [Joker::FourFingers, Joker::Shortcut, Joker::Pareidolia, Joker::Splash, Joker::SmearedJoker, Joker::Blueprint];
+    let is_pareidolia_exists = joker_cards.iter().any(|card| card.joker == Joker::Pareidolia);
+    // joker_cards
+    //     .iter()
+    //     .filter(|card| special_jokers.contains(&card.joker))
+    //     .for_each(|card| {
+    //         new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
+    //     });
 
     joker_cards
         .iter()
@@ -338,7 +357,9 @@ pub fn joker_application(
                 on_scored_cards,
                 new_result.0,
                 new_result.1,
+                is_pareidolia_exists
             );
+            // new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
         });
 
     joker_cards
@@ -351,7 +372,9 @@ pub fn joker_application(
                 on_scored_cards,
                 new_result.0,
                 new_result.1,
+                is_pareidolia_exists
             );
+            // new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
         });
 
     joker_cards
@@ -371,6 +394,7 @@ pub fn joker_application(
                 on_scored_cards,
                 new_result.0,
                 new_result.1,
+                is_pareidolia_exists
             );
         });
 
