@@ -1,9 +1,55 @@
-use crate::poker::{apply_edition, compute_card_order, determine_current_suit, determine_total_colors};
+//! # Jokers
+//!
+//! This module defines how special Joker cards modify chip and multiplier values.
+//! Jokers are divided into categories (easy, medium, hard, etc.), each applying
+//! different rules depending on the current hand, held cards, or scored cards.
+//!
+//! These functions are called by the scoring pipeline to apply Joker effects
+//! after the base hand value and enhancements/editions are computed.
+
+use crate::poker::{
+    apply_edition, compute_card_order, determine_current_suit, determine_total_colors,
+};
 use ordered_float::OrderedFloat;
 use ortalib::{Card, Chips, Enhancement, Joker, JokerCard, Mult, PokerHand, Rank, Suit, SuitColor};
 
-// ------------------------------- Easy Joker -------------------------------
-fn apply_easy_jokers(
+/// Applies the effects of "easy" Jokers to the current score.
+///
+/// Easy Jokers include:
+/// - **Base Joker**: +4 multiplier
+/// - **Jolly Joker**: +8 multiplier if the hand is a pair, trips, full house, etc.
+/// - **Sly Joker**: +50 chips for the same hand types
+/// - **Zany Joker**: +12 multiplier for trips/full house/quads/etc.
+/// - **Wily Joker**: +100 chips for the same
+/// - **Mad Joker**: +10 multiplier for two pair/full house
+/// - **Clever Joker**: +80 chips for the same
+/// - **Crazy Joker**: +12 multiplier for straights
+/// - **Devious Joker**: +100 chips for straights
+/// - **Droll Joker**: +10 multiplier for flushes/quads
+/// - **Crafty Joker**: +80 chips for the same
+/// - **Abstract Joker**: +3 multiplier per Joker card in play
+///
+/// # Arguments
+/// * `joker` — The Joker being applied.
+/// * `hand` — The detected [`PokerHand`].
+/// * `joker_cards_len` — Total number of jokers in play.
+/// * `chip` — Current chip value.
+/// * `mul` — Current multiplier value.
+///
+/// # Returns
+/// A tuple `(Chips, Mult)` with updated values.
+///
+/// # Example
+/// ```
+/// use ortalib::{PokerHand, Joker};
+/// use ortalab::poker::jokers::apply_easy_jokers;
+///
+/// // Base Joker always adds +4 multiplier
+/// let (chips, mult) = apply_easy_jokers(Joker::Joker, PokerHand::Pair, 1, 100.0, 1.0);
+/// assert_eq!(chips, 100.0);
+/// assert_eq!(mult, 5.0);
+/// ```
+pub fn apply_easy_jokers(
     joker: Joker,
     hand: PokerHand,
     joker_cards_len: usize,
@@ -104,15 +150,65 @@ fn apply_easy_jokers(
     (res.0, res.1)
 }
 
-// ------------------------------- Medium Joker -------------------------------
-fn apply_medium_jokers(
+/// Applies the effects of "medium" Jokers to the current score.
+///
+/// Medium Jokers include:
+/// - **Raised Fist**: Adds multiplier based on lowest rank in hand
+/// - **Blackboard Joker**: Triples multiplier if all held cards are black suits
+/// - **Baron Joker**: Multiplier ×1.5 for each King held
+/// - **Greedy/Lusty/Wrathful/Gluttonous Jokers**: +3 multiplier per card of a specific suit
+/// - **Fibonacci Joker**: +8 multiplier for cards with Fibonacci ranks (A,2,3,5,8)
+/// - **Scary Face**: +30 chips per face card
+/// - **Even Steven**: +4 multiplier per even‑ranked card ≤ 10
+/// - **Odd Todd**: +31 chips per odd‑ranked card (or Ace)
+/// - **Photograph**: Doubles multiplier if at least one face card is present
+/// - **Smiley Face**: +5 multiplier per face card
+/// - **Flower Pot**: Triples multiplier if all suits (or both colors with Smear) are present
+///
+/// # Arguments
+/// * `joker` — The Joker being applied.
+/// * `on_held` — Cards currently held in hand.
+/// * `on_scored` — Cards being scored.
+/// * `chip` — Current chip value.
+/// * `mul` — Current multiplier value.
+/// * `is_pareidolia_exists` — Whether Pareidolia Joker is active (treats all cards as faces).
+/// * `is_smeared_exists` — Whether Smear Joker is active (treats red/black suits as equivalent).
+///
+/// # Returns
+/// A tuple `(Chips, Mult)` with updated values.
+///
+/// # Example
+/// ```
+/// use ortalib::{Card, Rank, Suit, Joker};
+/// use ortalab::poker::jokers::apply_medium_jokers;
+///
+/// // Even Steven: +4 multiplier for even ranks ≤ 10
+/// let cards = vec![
+///     Card::new(Rank::Two, Suit::Clubs, None, None),
+///     Card::new(Rank::Four, Suit::Hearts, None, None),
+/// ];
+///
+/// let (chips, mult) = apply_medium_jokers(
+///     Joker::EvenSteven,
+///     &[],
+///     &cards,
+///     100.0,
+///     1.0,
+///     false,
+///     false,
+/// );
+///
+/// assert_eq!(chips, 100.0);
+/// assert_eq!(mult, 9.0); // +4 for each even card
+/// ```
+pub fn apply_medium_jokers(
     joker: Joker,
     on_held: &[Card],
     on_scored: &[Card],
     chip: f64,
     mul: f64,
     is_pareidolia_exists: bool,
-    is_smeared_exists: bool
+    is_smeared_exists: bool,
 ) -> (Chips, Mult) {
     let mut res = (chip, mul);
     let mut on_held_iter = on_held.iter();
@@ -199,7 +295,7 @@ fn apply_medium_jokers(
     // Gluttonus Joker
     if joker == Joker::GluttonousJoker {
         on_scored.iter().for_each(|&card| {
-            if card.suit == Suit::Clubs || (card.suit == Suit::Spades && is_smeared_exists){
+            if card.suit == Suit::Clubs || (card.suit == Suit::Spades && is_smeared_exists) {
                 res.1 += 3.0;
             } else if let Some(enhance) = card.enhancement
                 && enhance == Enhancement::Wild
@@ -228,7 +324,7 @@ fn apply_medium_jokers(
         on_scored.iter().for_each(|&card| {
             if card.rank.is_face() || is_pareidolia_exists {
                 res.0 += 30.0;
-            } 
+            }
         })
     }
 
@@ -282,27 +378,62 @@ fn apply_medium_jokers(
         let having_clubs = determine_current_suit(on_scored, Suit::Clubs);
         let having_red_cards = determine_total_colors(on_scored, SuitColor::Red);
         let having_black_cards = determine_total_colors(on_scored, SuitColor::Black);
-        
-        if (having_diamonds && having_hearts && having_spades && having_clubs) 
-        || (is_smeared_exists && having_red_cards && having_black_cards) {
+
+        if (having_diamonds && having_hearts && having_spades && having_clubs)
+            || (is_smeared_exists && having_red_cards && having_black_cards)
+        {
             res.1 *= 3.0
-        } 
+        }
     }
 
     (res.0, res.1)
 }
 
-// ------------------------------- Hard Joker -------------------------------
-// fn apply_hard_jokers(joker: Joker, chip: f64, mul: f64) -> (Chips, Mult) {
-//     let mut res = (chip, mul);
-
-
-
-
-
-//     (res.0, res.1)
-// }
-
+/// Applies all Joker effects to the current score.
+///
+/// This function iterates over all Joker cards in play and applies their
+/// effects depending on their category:
+///
+/// - **Independent Jokers** (e.g. Base Joker, Jolly Joker, Abstract Joker, Blackboard, Flower Pot)
+///   are applied regardless of held/scored context.
+/// - **On‑scored Jokers** (e.g. Greedy, Lusty, Wrathful, Gluttonous, Fibonacci, Scary Face, etc.)
+///   are applied based on the cards currently being scored.
+/// - **On‑held Jokers** (e.g. Raised Fist, Baron, Mime) are applied based on cards still in hand.
+/// - **Editions** attached to Joker cards are also applied at the end.
+///
+/// The function also checks for global Joker effects like **Pareidolia** (treat all cards as faces)
+/// and **Smeared Joker** (treat red/black suits as equivalent).
+///
+/// # Arguments
+/// * `joker_cards` — The Joker cards in play.
+/// * `on_held_cards` — Cards currently held in hand.
+/// * `on_scored_cards` — Cards being scored.
+/// * `hand` — The detected [`PokerHand`] for this round.
+/// * `chip` — Current chip value before Jokers.
+/// * `mul` — Current multiplier value before Jokers.
+///
+/// # Returns
+/// A tuple `(Chips, Mult)` with updated values after all Joker effects.
+///
+/// # Example
+/// ```
+/// use ortalib::{Card, Rank, Suit, Joker, JokerCard, PokerHand};
+/// use ortalab::poker::jokers::joker_application;
+///
+/// // Start with a simple hand: Pair of Kings
+/// let scored = vec![
+///     Card::new(Rank::King, Suit::Hearts, None, None),
+///     Card::new(Rank::King, Suit::Spades, None, None),
+/// ];
+///
+/// // Add a Base Joker (always +4 multiplier)
+/// let jokers = vec![JokerCard::new(Joker::Joker, None)];
+///
+/// let (chips, mult) = joker_application(&jokers, &[], &scored, PokerHand::Pair, 100.0, 1.0);
+///
+/// assert_eq!(chips, 100.0);
+/// assert_eq!(mult, 5.0); // base 1.0 + 4.0 from Joker
+/// ```
 pub fn joker_application(
     joker_cards: &[JokerCard],
     on_held_cards: &[Card],
@@ -339,19 +470,15 @@ pub fn joker_application(
         Joker::OddTodd,
         Joker::Photograph,
         Joker::SmileyFace,
-        Joker::SockAndBuskin
+        Joker::SockAndBuskin,
     ];
     let on_held_jokers = [Joker::RaisedFist, Joker::Baron, Joker::Mime];
-    // let special_jokers = [Joker::FourFingers, Joker::Shortcut, Joker::Pareidolia, Joker::Splash, Joker::SmearedJoker, Joker::Blueprint];
-    let is_pareidolia_exists = joker_cards.iter().any(|card| card.joker == Joker::Pareidolia);
-    let is_smeared_exists= joker_cards.iter().any(|card| card.joker == Joker::SmearedJoker);
-
-    // joker_cards
-    //     .iter()
-    //     .filter(|card| special_jokers.contains(&card.joker))
-    //     .for_each(|card| {
-    //         new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
-    //     });
+    let is_pareidolia_exists = joker_cards
+        .iter()
+        .any(|card| card.joker == Joker::Pareidolia);
+    let is_smeared_exists = joker_cards
+        .iter()
+        .any(|card| card.joker == Joker::SmearedJoker);
 
     joker_cards
         .iter()
@@ -364,9 +491,8 @@ pub fn joker_application(
                 new_result.0,
                 new_result.1,
                 is_pareidolia_exists,
-                is_smeared_exists
+                is_smeared_exists,
             );
-            // new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
         });
 
     joker_cards
@@ -380,9 +506,8 @@ pub fn joker_application(
                 new_result.0,
                 new_result.1,
                 is_pareidolia_exists,
-                is_smeared_exists
+                is_smeared_exists,
             );
-            // new_result = apply_hard_jokers(card.joker, new_result.0, new_result.1);
         });
 
     joker_cards
@@ -403,7 +528,7 @@ pub fn joker_application(
                 new_result.0,
                 new_result.1,
                 is_pareidolia_exists,
-                is_smeared_exists
+                is_smeared_exists,
             );
         });
 
@@ -415,15 +540,6 @@ pub fn joker_application(
             new_result
         };
     });
-
-    // cards.iter().for_each(|card| {
-    //   new_result = apply_medium_jokers(card.joker, on_held_cards, on_scored_cards, new_result.0, new_result.1);
-    //   new_result = if let Some(edition) = card.edition {
-    //     apply_edition(edition, new_result.0, new_result.1, false)
-    //   } else {
-    //     new_result
-    //   };
-    // });
 
     (new_result.0, new_result.1)
 }
